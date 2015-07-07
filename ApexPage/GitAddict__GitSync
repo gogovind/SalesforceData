@@ -1,0 +1,130 @@
+<apex:page controller="GitSync" sidebar="false">
+    <apex:includeScript value="{!URLFOR($Resource.jszip, '/jszip.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.jszip, '/jszip-load.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.jszip, '/jszip-deflate.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.jszip, '/jszip-inflate.js')}"/> 
+    <style>
+    ul{
+         list-style:none;
+      }
+    ul li{
+       list-style:none;
+    }
+    </style> 
+    
+    <script type="text/javascript"> 
+        function jsfind(obj,obj1,obj2){
+            
+            var el = document.getElementById(obj);                                       
+            if ( el.style.display != 'none' ) {
+                el.style.display = 'none';
+            }
+            else {
+                el.style.display = '';
+            }
+            var e2 = document.getElementById(obj1);                                       
+            if ( e2.style.display != 'none' ) {
+                e2.style.display = 'none';
+            }
+            else {
+                e2.style.display = '';
+            }
+            var e3 = document.getElementById(obj2);                                       
+            if ( e2.style.display != 'none' ) {
+                e3.style.display = 'none';
+            }
+            else {
+                e3.style.display = '';
+            }
+        }
+    </script>
+     
+    <apex:form id="form" >
+        <apex:outputpanel >
+            <apex:actionstatus id="actStatusId">
+                <apex:facet name="start">
+                    <div class="waitingSearchDiv" id="el_loading" style="background-color:#d3d3d3;
+                           height: 100%;opacity:0.65;width:100%;"> 
+                        <div class="waitingHolder" style="top:400px;left:500px;width: 91px;height: 100%;position:fixed;">
+                            <img class="waitingImage" src="/img/loading.gif" title="Please Wait..." />
+                            <span class="waitingDescription">Please Wait...</span>
+                        </div>
+                    </div>
+                </apex:facet>
+            </apex:actionstatus>
+        </apex:outputpanel>
+        <apex:sectionHeader title="Metadata Retrieve Demo"/>
+        <apex:pageMessages id="messages"/>
+        <apex:actionPoller action="{!checkAsyncRequest}" interval="5" rerender="form" rendered="{!NOT(ISNULL(AsyncResult))}"/>
+        <apex:actionPoller action="{!checkAsyncRequestDeploy}" interval="5" rerender="form" rendered="{!NOT(ISNULL(AsyncResultDeploy))}"/>
+        <apex:pageBlock title="Layouts" rendered="{!AND(ISNULL(AsyncResult),ISNULL(MetaDataRetrieveZip))}">
+            <apex:pageBlockButtons >
+                <apex:commandButton value="GitSync" action="{!syncMetadataItem}"/>
+                <apex:commandButton value="Deploy" action="{!deployZip}" />
+            </apex:pageBlockButtons>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSectionItem >
+                    <apex:commandButton value="SelectAll" action="{!selectAll}"/>
+                    <apex:commandButton value="DeselectAll" action="{!data}" />
+                </apex:pageBlockSectionItem>
+                <apex:dataList value="{!metadataWrapList}" var="metaType" >                  
+                    <apex:outputpanel id="plusimage">
+                        <apex:commandLink action="{!listMetadataItems}" reRender="inlinetablesec" status="actStatusId">
+                            <apex:param name="dataType" value="true" assignTo="{!metaType.isExpanded}"/>        
+                            <apex:image url="{!URLFOR($Resource.tree_icons,'right.png')}" onclick="jsfind('{!$Component.inlinetablesec}','{!$Component.plusimage}','{!$Component.minusimage}')"/> 
+                        </apex:commandLink>
+                    </apex:outputpanel>
+                    <apex:outputpanel id="minusimage" style="display:none;">
+                        <apex:image url="{!URLFOR($Resource.tree_icons,'down.png')}" onclick="jsfind('{!$Component.inlinetablesec}','{!$Component.plusimage}','{!$Component.minusimage}')" />
+                    </apex:outputpanel> 
+                    <apex:param value="false" name="p1"/>
+                    <apex:inputCheckbox value="{!metaType.isMetaDataSelected}" id="check">
+                        <apex:actionSupport action="{!allMetadataSelect}" event="onclick" reRender="inlinetablesec" status="actStatusId">
+                            <apex:param name="dataType" value="true" assignTo="{!metaType.isExpanded}"/> 
+                        </apex:actionSupport>
+                    </apex:inputCheckbox>                
+                    <apex:outputText >{!metaType.metaDataType}</apex:outputText>
+                    <br/>                                           
+                    <apex:outputpanel id="inlinetablesec" style="{!IF(metaType.metadataItemList.size>0 || metaType.metadataFolderList.size>0,'display:block','display:none')};">                             
+                        <apex:dataList id="pbtItems" value="{!metaType.metadataItemList}" var="metaItems" rendered="{!NOT(ISBLANK(metaType.metadataItemList))}" >                               
+                            <apex:outputpanel id="checkItem">
+                                <apex:inputCheckbox styleClass="checkMetaItem" value="{!metaItems.isItemSelected}" id="checked"/>
+                                <apex:outputText >{!metaItems.metaDataItem}</apex:outputText>
+                            </apex:outputpanel>                                
+                        </apex:dataList> 
+                        <apex:dataList id="pbtFolders" value="{!metaType.metadataFolderList}" var="metaFolders" rendered="{!NOT(ISBLANK(metaType.metadataFolderList))}">                                                                 
+                            <apex:outputpanel id="plusimage1" >
+                                <apex:commandLink action="{!listFolderMetadataItems}" reRender="folderItemsPanel" status="actStatusId">      
+                                    <apex:image url="{!URLFOR($Resource.tree_icons,'right.png')}" onclick="jsfind('{!$Component.folderItemsPanel}','{!$Component.plusimage1}','{!$Component.minusimage1}')"/> 
+                                </apex:commandLink>
+                            </apex:outputpanel>
+                            <apex:outputpanel id="minusimage1" style="display:none;">
+                                <apex:image url="{!URLFOR($Resource.tree_icons,'down.png')}" onclick="jsfind('{!$Component.folderItemsPanel}','{!$Component.plusimage1}','{!$Component.minusimage1}')" />
+                            </apex:outputpanel> 
+                            <apex:outputpanel id="checkFolder">
+                                <apex:inputCheckbox value="{!metaFolders.isFolderSelected}">
+                                    <apex:actionSupport event="onclick" action="{!metadataFolderSelect}" reRender="checkFolderItem" />
+                                </apex:inputCheckbox>
+                            </apex:outputpanel>
+                            <apex:outputText >{!metaFolders.metaDataFolder}</apex:outputText>
+                            <apex:outputpanel id="folderItemsPanel" rendered="{!NOT(ISBLANK(metaFolders.metadataFolderItemList))}">
+                                <apex:dataList id="pbtItems" value="{!metaFolders.metadataFolderItemList}" var="metaFolderItems" >                                       
+                                    <apex:inputCheckbox styleClass="checkMetaItem" value="{!metaFolderItems.isFolderItemSelected}" id="checkFolderItem"/>                                        
+                                    <apex:outputText >{!metaFolderItems.metaDataFolderItem}</apex:outputText>                                        
+                                </apex:dataList>  
+                            </apex:outputpanel>                           
+                        </apex:dataList>                                                                                
+                    </apex:outputpanel>   
+                </apex:dataList>
+            </apex:pageBlockSection>
+        </apex:pageBlock>   
+        <apex:outputPanel rendered="{!NOT(ISNULL(MetaDataRetrieveZip))}">
+            <apex:actionFunction name="receiveFile" action="{!receiveMetadataZipFile}" rerender="messages,files" oncomplete="unzip();">
+                <apex:param name="filename" assignTo="{!MetadataFileName}" value=""/>
+                <apex:param name="filedata" assignTo="{!MetadataFileData}" value=""/>
+            </apex:actionFunction>  
+            <apex:actionFunction name="receiveComplete" action="{!receiveComplete}" rerender="form"/>
+            <c:unzip name="unzip" oncomplete="if(more) receiveFile(path,data); else receiveComplete();">{!MetaDataRetrieveZip}</c:unzip>
+        </apex:outputPanel>
+    </apex:form>
+</apex:page>
