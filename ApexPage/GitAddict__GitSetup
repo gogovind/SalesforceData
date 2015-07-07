@@ -1,0 +1,209 @@
+<apex:page controller="GitSetup" id="pg" sidebar="false">
+    <style type="text/css">
+        .noSidebarCell{
+            padding:0px;
+        }
+        .pbSubsection{
+              padding-top: 25px;
+        }
+        body .bPageBlock .detailList tr td{
+            border:none;
+        }
+        .apexp .bPageBlock.apexDefaultPageBlock .pbBody{
+            margin:0px;
+        }
+        .rich-tab-bottom-line {
+            padding-top: 20px;
+            background: rgb(51, 153, 204) none repeat scroll 0% 0%;
+        }
+        
+        .pbBody td, .lbBody a, .lbBodyDescription, .list .headerRow .noRowsHeader {
+             border: none;          
+        }
+        
+        .pbBody td.rich-tab-inactive{
+             color:white;
+        }
+        
+        .pbBody {
+            margin-left:1.5em;
+        
+        }
+        
+        .pbBody td.rich-tab-inactive:hover{
+             color:black;
+        }
+        
+        .rich-tab-active{
+              background-color: #f5fafc; 
+              border: none;
+              background-image: none;
+              padding: 10px;    
+              font-size: 15px;
+              font-weight: bold;
+              border-radius:5px 5px 0px 0px;
+               
+        }
+        
+        .rich-tabpanel-content{
+            background-color: white;
+            height: 350px;
+                 
+        }
+        
+        .bPageBlock .message{
+            margin-top: 50px;
+        }
+        
+        .body .bPageBlock, body #bodyCell .bResource .secondaryPalette, body .secondaryPalette.bPageBlock, body .individualPalette .secondaryPalette.bPageBlock, body .bodyDiv .genericTable, body .genericPageBlockTable, body .bodyDiv .bSubBlock, body .bComponentBlock .bPageBlock, body .bMyDashboard .bPageBlock, body.rlHoverFrame .bPageBlock, body.subjectSelectionPopup div.choicesBox, body.lookupTab .secondaryPalette.bPageBlock, body.popupTab .secondaryPalette.bPageBlock, body.UserTagStatsPage .secondaryPalette.bPageBlock {
+            background-color: white;   
+        }
+        
+        .rich-tab-inactive{
+            background-color: inherit;
+            background-image: none; 
+            padding: 10px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        
+        .rich-tab-inactive:hover{
+            background-color: #f5fafc;
+            color: black;
+            border: none;
+            border-radius:5px 5px 0px 0px;
+        }
+        
+        
+        body .bPageBlock .pbBody .labelCol, body .bPageBlock .pbBody .dataCol, body .bPageBlock .pbBody .data2Col, body .print .topics-label, body .print .topics-list{
+            font-size: 13px;
+        }
+        
+        .pbBody, .pbBody a, .pbBody td, .lbBody a, .lbBodyDescription, .list .headerRow .noRowsHeader {
+            font-size: 13px;
+        }
+        .rich-tabhdr-side-border{
+          background-image:none;
+        }
+        .pbBody td{
+           padding-right:5px;
+        }
+        .bPageBlock .brandSecondaryBrd .apexDefaultPageBlock .secondaryPalette{
+            margin-top:20px;
+        }
+        
+        td.rich-tabpanel-content{
+            border-style: solid;
+            border-width: 30px;
+            border-color:#f5fafc;
+           
+        } 
+        
+    </style>
+    <apex:pageBlock mode="maindetail">
+    <apex:tabPanel title="GitSetup" switchType="client" id="GitPanel" value="{!$CurrentPage.parameters.selectedTab}">
+                <apex:tab label="Connection" name="GConnect" id="tabConnect" >
+                    <apex:form id="formConnect">
+                        
+                        <apex:pageBlockSection rendered="{!NOT(isConnected)}">                        
+                            <apex:commandButton value="Connect Github" action="{!authorize}" rerender="false"/>
+                        </apex:pageBlockSection>
+                        <apex:pageBlockSection rendered="{!isConnected}" columns="1" >
+                            <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                <apex:outputLabel value="Username" />
+                                <apex:outputText >{!userdata.userName}</apex:outputText>
+                            </apex:pageBlockSectionItem>
+                            <apex:pageBlockSectionItem >
+                                <apex:outputLabel value="Public Repos" />
+                                <apex:outputText >{!userdata.noOfPublicRepos}</apex:outputText>
+                            </apex:pageBlockSectionItem>
+                        </apex:pageBlockSection> 
+                       
+                    </apex:form>
+                    <apex:pageMessage severity="Error" strength="3" summary="You do not have write permissions to the repository. Contact your System Administrator to add you as a contributor." rendered="{!AND(isRepositorySetup,NOT(repoInfo.writeAccess))}"></apex:pageMessage>
+                </apex:tab> 
+                <apex:tab label="Repositories" name="GRepo" id="tabRepo">
+                    <apex:form id="formRepo">
+                        <apex:pageBlock title="Git Repositories" rendered="{!isConnected}" mode="maindetail"> 
+                            <apex:pageBlockSection rendered="{!NOT(isRepositorySetup)}" columns="1">
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Name" Style="border-top:0px"/>
+                                    <apex:inputText required="true" value="{!repositoryName}"/>
+                                </apex:pageBlockSectionItem>
+                            </apex:pageBlockSection>
+                            
+                            <apex:pageBlockButtons location="bottom" rendered="{!NOT(isRepositorySetup)}">
+                                <apex:commandButton action="{!createRepository}" value="Create Repository" oncomplete="window.location.reload();"/>
+                            </apex:pageBlockButtons> 
+                            
+                            <apex:pageBlockSection rendered="{!isRepositorySetup}" columns="1">
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Name" />
+                                    <apex:outputText >{!repoInfo.name}</apex:outputText>
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Full Name" />
+                                    <apex:outputText >{!repoInfo.fullName}</apex:outputText>
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Last Modified Date" />
+                                    <apex:outputText >{!repoInfo.lastModifiedDate}</apex:outputText>
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Description" />
+                                    <apex:outputText >{!repoInfo.description}</apex:outputText>
+                                </apex:pageBlockSectionItem>
+                            </apex:pageBlockSection>  
+                        </apex:pageBlock>
+                    </apex:form>
+                </apex:tab>
+                <apex:tab label="Team Members" name="GCollab" id="tabCollab" >
+                    <apex:form id="formCollab" >
+                        <apex:pageBlock title="Team Members" rendered="{!isConnected}" mode="maindetail">
+                            <apex:pageBlockSection rendered="{!NOT(isRepositorySetup)}" columns="1" >
+                                <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                    <apex:outputLabel value="Repository Name" />
+                                    <apex:inputText required="true" value="{!repositoryName}"/>
+                                </apex:pageBlockSectionItem>
+                            </apex:pageBlockSection>
+                           <apex:pageBlockSection rendered="{!isRepositorySetup}" columns="1">
+                               <apex:pageBlockSectionItem dataStyle="border:0px" labelStyle="border:0px">
+                                   <apex:outputLabel value="Repository Name" />
+                                   <apex:outputText >{!repoInfo.name}</apex:outputText>
+                               </apex:pageBlockSectionItem>
+                               <apex:pageBlockSectionItem id="Team" dataStyle="border:0px" labelStyle="border:0px">
+                                   <apex:outputLabel value="Team Members"/>
+                                   <apex:outputText >{!teamMembers}</apex:outputText>                                                 
+                               </apex:pageBlockSectionItem>
+                               
+                               <apex:actionFunction name="addCollaborator" action="{!CollaboratorTask}" rerender="panel">
+                                   <apex:param name="tab" value="GCollab" />
+                               </apex:actionFunction>
+                               
+                               <apex:commandLink value="Send a request to repo administrator to add you as a collaborator" rendered="{!AND($CurrentPage.parameters.selectedTab != 'GCollab',NOT(repoInfo.writeAccess))}" onclick="addAsCollaborator();return false;" />                               
+                               
+                               <apex:outputPanel rendered="{!NOT(isTaskAdded)}" id="panel">                    
+                                   <script>
+                                       function addAsCollaborator(){
+                                            addCollaborator();
+                                       }
+                                   </script>
+                               </apex:outputPanel>       
+                                                 
+                               <apex:pageMessages ></apex:pageMessages>
+                               
+                               <apex:panelGrid rendered="{!AND($CurrentPage.parameters.selectedTab == 'GCollab',NOT(isTeam))}" columns="3" id="pGrid">
+                                   <apex:outputText rendered="{!$CurrentPage.parameters.tskId != null}">{!task.Subject}</apex:outputText>
+                                   <apex:commandButton value="Accept" action="{!acceptCollaborator}" oncomplete="window.location.reload();"/>
+                                   <apex:commandButton value="Reject" action="{!rejectCollaborator}"/>
+                               </apex:panelGrid>        
+                                       
+                           </apex:pageBlockSection>
+                       </apex:pageBlock> 
+                    </apex:form>
+                </apex:tab>
+            </apex:tabPanel>
+        
+        </apex:pageBlock>   
+            
+</apex:page>
